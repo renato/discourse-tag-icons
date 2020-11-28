@@ -1,5 +1,6 @@
 <script type="text/discourse-plugin" version="0.8.29">
   let tagIconList = settings.tag_icon_list.split('|');
+  const tagIconFallback = settings.tag_icon_fallback
   const { iconHTML } = require("discourse-common/lib/icon-library");
   const getURL = require('discourse-common/lib/get-url').default;
 
@@ -37,7 +38,12 @@
   			let itemColor = tagIcon[2] ? `style="color: ${tagIcon[2]}"` : "";
   			tagIconHTML = `<span ${itemColor} class="tag-icon">${iconHTML(tagIcon[1])}</span>`;
   		}
-  	}
+  	} else if (tagIconFallback) {
+      let tagIcon = tagIconFallback.split(',');
+
+      let itemColor = tagIcon[1] ? `style="color: ${tagIcon[1]}"` : "";
+      tagIconHTML = `<span ${itemColor} class="tag-icon">${iconHTML(tagIcon[0])}</span>`;
+    }
   	/// End custom tag icon
 
     let val =

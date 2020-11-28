@@ -7,3 +7,6 @@ svg_icons:
   type: "list"
   list_type: "compact"
   description: "List of FontAwesome 5 icons used in this theme component"
+tag_icon_fallback:
+  default: ""
+  description: 'Enter the icon for all other tags in the format "icon,iconColor". (Icon color is optional.)'
