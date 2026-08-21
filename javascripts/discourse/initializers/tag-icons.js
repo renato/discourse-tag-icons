@@ -1,4 +1,3 @@
-import { set } from "@ember/object";
 import TagHashtagType from "discourse/lib/hashtag-types/tag";
 import { iconHTML } from "discourse/lib/icon-library";
 import { withPluginApi } from "discourse/lib/plugin-api";
@@ -94,24 +93,6 @@ export default {
   initialize(owner) {
     withPluginApi((api) => {
       api.replaceTagRenderer(iconTagRenderer);
-
-      /* TagDrop's selected header is not rendered through the tag renderer.
-       * It does, however, display an icon supplied by its selection item. Add
-       * the configured glyph there so the closed chooser matches its rows. */
-      api.modifyClass("component:tag-drop", {
-        pluginId: "discourse-tag-icons-tag-drop",
-
-        modifySelection(content) {
-          const selection = this._super(content);
-          const iconConfig = iconConfigForTag(this.tag);
-
-          if (selection && iconConfig) {
-            set(selection, "icon", iconConfig.icon);
-          }
-
-          return selection;
-        },
-      });
 
       /** @type {Record<string, { icon: string, color?: string }>} */
       const tagsMap = {};
