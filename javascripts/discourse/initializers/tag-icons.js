@@ -2,7 +2,10 @@ import TagHashtagType from "discourse/lib/hashtag-types/tag";
 import { iconHTML } from "discourse/lib/icon-library";
 import { withPluginApi } from "discourse/lib/plugin-api";
 import { defaultRenderTag } from "discourse/lib/render-tag";
+import TagDrop from "discourse/select-kit/components/tag-drop";
 import { contrastColor } from "../lib/colors";
+
+let tagDropExtended = false;
 
 function iconConfigForTag(tag) {
   const tagName = typeof tag === "string" ? tag : tag?.slug || tag?.name;
@@ -56,6 +59,29 @@ function iconTagRenderer(tag, params) {
   return renderedTag;
 }
 
+function extendTagDropSelection() {
+  if (tagDropExtended) {
+    return;
+  }
+
+  const coreModifySelection = TagDrop.prototype.modifySelection;
+
+  TagDrop.reopen({
+    modifySelection(content) {
+      const selection = coreModifySelection.call(this, content);
+      const iconConfig = iconConfigForTag(this.getName(selection));
+
+      if (!selection || !iconConfig) {
+        return selection;
+      }
+
+      return { ...selection, icon: iconConfig.icon };
+    },
+  });
+
+  tagDropExtended = true;
+}
+
 class TagHashtagTypeWithIcon extends TagHashtagType {
   constructor(dict, owner) {
     super(owner);
@@ -91,6 +117,8 @@ export default {
   before: "hashtag-css-generator",
 
   initialize(owner) {
+    extendTagDropSelection();
+
     withPluginApi((api) => {
       api.replaceTagRenderer(iconTagRenderer);
 
