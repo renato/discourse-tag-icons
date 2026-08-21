@@ -1,43 +1,55 @@
+import { set } from "@ember/object";
 import TagHashtagType from "discourse/lib/hashtag-types/tag";
 import { iconHTML } from "discourse/lib/icon-library";
 import { withPluginApi } from "discourse/lib/plugin-api";
 import { defaultRenderTag } from "discourse/lib/render-tag";
 import { contrastColor } from "../lib/colors";
 
+function iconConfigForTag(tag) {
+  const tagName = typeof tag === "string" ? tag : tag?.slug || tag?.name;
+
+  if (!tagName) {
+    return;
+  }
+
+  const tagIconItem = settings.tag_icon_list.split("|").find((line) => {
+    const separatorIndex = line.indexOf(",");
+
+    return (
+      separatorIndex > -1 &&
+      tagName.toLowerCase() === line.substring(0, separatorIndex).toLowerCase()
+    );
+  });
+
+  if (tagIconItem) {
+    const [, icon, color] = tagIconItem.split(",");
+    return { icon, color };
+  }
+}
+
 function iconTagRenderer(tag, params) {
   // Get the rendered default tag markup.
   const renderedTag = defaultRenderTag(tag, params);
-
-  // Handle both string tags (legacy) and object tags (new format: { id, name, slug })
-  const tagName = typeof tag === "string" ? tag : tag.slug || tag.name;
-
-  // Get the tag configuration list from the settings.
-  const tagIconList = settings.tag_icon_list.split("|");
-
-  // Returns the tag configuration if found.
-  const tagIconItem = tagIconList.find(
-    (line) =>
-      line.indexOf(",") > -1 &&
-      tagName.toLowerCase() === line.substr(0, line.indexOf(",")).toLowerCase()
-  );
+  const iconConfig = iconConfigForTag(tag);
 
   // Update the tag markup with an SVG icon, and inline-styles for the colors.
-  if (tagIconItem) {
-    const [, iconName, color] = tagIconItem.split(",");
-
+  if (iconConfig) {
     const parser = new DOMParser();
     const tagElement = parser.parseFromString(renderedTag, "text/html").body
       .firstChild;
     const iconElement = parser.parseFromString(
-      `<span class="tag-icon">${iconHTML(iconName)}</span>`,
+      `<span class="tag-icon">${iconHTML(iconConfig.icon)}</span>`,
       "text/html"
     ).body.firstChild;
 
     tagElement.prepend(iconElement);
     tagElement.classList.add("discourse-tag--tag-icons-style");
-    tagElement.style.setProperty("--color1", color ?? "");
+    tagElement.style.setProperty("--color1", iconConfig.color ?? "");
 
-    tagElement.style.setProperty("--color2", color ? contrastColor(color) : "");
+    tagElement.style.setProperty(
+      "--color2",
+      iconConfig.color ? contrastColor(iconConfig.color) : ""
+    );
 
     return tagElement.outerHTML;
   }
@@ -82,6 +94,24 @@ export default {
   initialize(owner) {
     withPluginApi((api) => {
       api.replaceTagRenderer(iconTagRenderer);
+
+      /* TagDrop's selected header is not rendered through the tag renderer.
+       * It does, however, display an icon supplied by its selection item. Add
+       * the configured glyph there so the closed chooser matches its rows. */
+      api.modifyClass("component:tag-drop", {
+        pluginId: "discourse-tag-icons-tag-drop",
+
+        modifySelection(content) {
+          const selection = this._super(content);
+          const iconConfig = iconConfigForTag(this.tag);
+
+          if (selection && iconConfig) {
+            set(selection, "icon", iconConfig.icon);
+          }
+
+          return selection;
+        },
+      });
 
       /** @type {Record<string, { icon: string, color?: string }>} */
       const tagsMap = {};
